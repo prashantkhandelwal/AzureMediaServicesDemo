@@ -14,18 +14,27 @@ namespace AzureMediaServicesDemo
     public class MediaServcies
     {
         private static IHubContext _hubContext;
-        private static readonly string accountName = ConfigurationManager.AppSettings["MediaServicesAccountName"];
-        private static readonly string accountKey = ConfigurationManager.AppSettings["MediaServicesAccountKey"];
+        private static readonly string adTenant = ConfigurationManager.AppSettings["MediaServicesADTenant"];
+        private static readonly string amsEndpoint = ConfigurationManager.AppSettings["MediaServiceEndpoint"];
+        private static readonly string amsAppId = ConfigurationManager.AppSettings["MediaServiceAppId"];
+        private static readonly string amsAppSecret = ConfigurationManager.AppSettings["MediaServiceAppSecret"];
+
         private static CloudMediaContext context = null;
-        private static MediaServicesCredentials cachedCredentials = null;
+        private static AzureAdTokenCredentials tokenCredentials = null;
         private static string HubId = string.Empty;
 
         public static void InitMediaServices()
         {
             try
             {
-                cachedCredentials = new MediaServicesCredentials(accountName, accountKey);
-                context = new CloudMediaContext(cachedCredentials);
+
+                tokenCredentials = new AzureAdTokenCredentials("microsoft.onmicrosoft.com", new AzureAdClientSymmetricKey(amsAppId, amsAppSecret),
+                AzureEnvironments.AzureCloudEnvironment);
+
+                var tokenProvider = new AzureAdTokenProvider(tokenCredentials);
+
+                context = new CloudMediaContext(new Uri(amsEndpoint), tokenProvider);
+
                 _hubContext = GlobalHost.ConnectionManager.GetHubContext<ProgressHub>();
             }
             catch
@@ -93,7 +102,7 @@ namespace AzureMediaServicesDemo
                     _hubContext.Clients.Client(hubid).reportprogress("URL://" + streamingUrl);
                 }
             }
-            catch (Exception)
+            catch (Exception x)
             {
                 //Just in case, if any shit happens!!
             }
